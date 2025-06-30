@@ -1,42 +1,44 @@
-"use client";
-
+import React, { useState, forwardRef } from "react";
 import { Input } from "@material-tailwind/react";
-import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-interface PasswordInputProps {
-  placeholder?: string;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  value: string;
+interface PasswordInputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
 }
 
-const PasswordInput = ({
-  placeholder,
-  onChange,
-  value,
-}: PasswordInputProps) => {
-  const [showPassword, setShowPassword] = useState("password");
+const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
+  ({ label, ...rest }, ref) => {
+    const [showPassword, setShowPassword] = useState(false);
 
-  return (
-    <div className="relative w-full">
-      <Input
-        size="lg"
-        label={placeholder}
-        type={showPassword}
-        icon={
-          showPassword === "password" ? (
-            <FaEye onClick={() => setShowPassword("text")} />
-          ) : (
-            <FaEyeSlash onClick={() => setShowPassword("password")} />
-          )
-        }
-        {...({} as any)}
-        onChange={onChange}
-        value={value}
-        placeholder={placeholder}
-      />
-    </div>
-  );
-};
+    return (
+      <div className="relative w-full">
+        <Input
+          size="lg"
+          {...({} as any)}
+          type={showPassword ? "text" : "password"}
+          label={label}
+          icon={
+            showPassword ? (
+              <FaEyeSlash
+                onClick={() => setShowPassword(false)}
+                className="cursor-pointer"
+              />
+            ) : (
+              <FaEye
+                onClick={() => setShowPassword(true)}
+                className="cursor-pointer"
+              />
+            )
+          }
+          ref={ref}
+          {...rest} // forward name, onChange, etc.
+        />
+      </div>
+    );
+  }
+);
+
+PasswordInput.displayName = "PasswordInput";
 
 export default PasswordInput;

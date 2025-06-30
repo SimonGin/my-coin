@@ -10,7 +10,7 @@ const InfoBox = ({ title }: Props) => {
   return (
     <Alert
       icon={<FaInfoCircle size={25} />}
-      className="rounded-none border-l-4 border-[#FB9E3A] bg-[#FCEF91]/10 font-bold text-xl text-[#FB9E3A]"
+      className="rounded-none border-l-4 border-[#FB9E3A] bg-[#FCEF91]/10 font-bold text-md text-[#FB9E3A] select-none"
     >
       {title}
     </Alert>
