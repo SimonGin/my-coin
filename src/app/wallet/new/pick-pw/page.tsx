@@ -49,7 +49,7 @@ const PickPasswordPage = () => {
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       <div className="text-2xl font-semibold text-center">Pick a Password</div>
-      <InfoBox title="This password will be used to unlock your wallet" />
+      <InfoBox content="This password will be used to unlock your wallet" />
       <div className="w-full flex flex-col gap-1">
         <PasswordInput label="Password" {...register("password")} />
         {errors.password && (

@@ -1,15 +1,25 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import InfoBox from "@/components/info_box";
 import { Alert, Button, Chip, Typography } from "@material-tailwind/react";
 import { FaInfoCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 
 const MnemonicPage = () => {
-  const passPhrases = localStorage.getItem("mnemonic");
-
+  const [passPhrases, setPassPhrases] = useState<string[] | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const storedMnemonic = localStorage.getItem("mnemonic");
+    if (storedMnemonic) {
+      setPassPhrases(storedMnemonic.split(" "));
+    } else {
+      router.push("/wallet/new");
+    }
+  }, []);
+
+  if (!passPhrases) return null;
 
   const onContinue = () => {
     router.push("/wallet/new/verify");
@@ -20,9 +30,9 @@ const MnemonicPage = () => {
       <div className="text-2xl font-semibold text-center">
         Secret Recovery Phrase
       </div>
-      <InfoBox title="This is your recovery phrases for your wallet." />
+      <InfoBox content="This is your recovery phrases for your wallet." />
       <div className="grid grid-cols-4 gap-4">
-        {passPhrases?.split(" ").map((word, index) => (
+        {passPhrases?.map((word, index) => (
           <Chip
             key={index}
             color="teal"
