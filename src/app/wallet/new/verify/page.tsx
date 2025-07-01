@@ -20,7 +20,7 @@ const createValidationSchema = (challenges: any[]) => {
 };
 
 const VerificationPage = () => {
-  const { walletPw, walletMnemonic } = useWalletCreate();
+  const { setStep, walletPw, walletMnemonic } = useWalletCreate();
   const [challenges, setChallenges] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const router = useRouter();
@@ -49,6 +49,7 @@ const VerificationPage = () => {
   const [errors, setErrors] = useState<Record<number, string>>({});
 
   useEffect(() => {
+    setStep(3);
     if (!walletMnemonic) {
       router.replace("/wallet/new");
     } else {
@@ -100,6 +101,7 @@ const VerificationPage = () => {
 
     const allCorrect = challenges.every((c, idx) => answers[idx] === c.correct);
     if (allCorrect) {
+      setStep(4);
       console.log("All answers are correct!");
     } else {
       console.log("Some answers are incorrect.");

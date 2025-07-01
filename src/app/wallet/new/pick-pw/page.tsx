@@ -3,7 +3,7 @@
 import InfoBox from "@/components/info_box";
 import PasswordInput from "@/components/pw_input";
 import { Alert, Button, Typography } from "@material-tailwind/react";
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -32,7 +32,11 @@ type FormData = z.infer<typeof passwordSchema>;
 
 const PickPasswordPage = () => {
   const router = useRouter();
-  const { setWalletPw, setWalletMnemonic } = useWalletCreate();
+  const { setStep, setWalletPw, setWalletMnemonic } = useWalletCreate();
+
+  useEffect(() => {
+    setStep(1);
+  }, []);
 
   const {
     register,

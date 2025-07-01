@@ -9,10 +9,11 @@ import { useWalletCreate } from "@/states/wallet_creation";
 
 const MnemonicPage = () => {
   const [passPhrases, setPassPhrases] = useState<string[] | null>(null);
-  const { walletMnemonic } = useWalletCreate();
+  const { setStep, walletMnemonic } = useWalletCreate();
   const router = useRouter();
 
   useEffect(() => {
+    setStep(2);
     if (walletMnemonic.length > 0) {
       setPassPhrases(walletMnemonic);
     } else {
