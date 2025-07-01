@@ -5,15 +5,16 @@ import InfoBox from "@/components/info_box";
 import { Alert, Button, Chip, Typography } from "@material-tailwind/react";
 import { FaInfoCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { useWalletCreate } from "@/states/wallet_creation";
 
 const MnemonicPage = () => {
   const [passPhrases, setPassPhrases] = useState<string[] | null>(null);
+  const { walletMnemonic } = useWalletCreate();
   const router = useRouter();
 
   useEffect(() => {
-    const storedMnemonic = localStorage.getItem("mnemonic");
-    if (storedMnemonic) {
-      setPassPhrases(storedMnemonic.split(" "));
+    if (walletMnemonic.length > 0) {
+      setPassPhrases(walletMnemonic);
     } else {
       router.push("/wallet/new");
     }

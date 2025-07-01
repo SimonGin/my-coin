@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import * as bip39 from "bip39";
+import React from "react";
 
 interface Props {
   children: React.ReactNode;

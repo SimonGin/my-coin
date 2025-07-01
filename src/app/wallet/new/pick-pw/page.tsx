@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaInfoCircle } from "react-icons/fa";
 import * as bip39 from "bip39";
+import { useWalletCreate } from "@/states/wallet_creation";
 
 const passwordSchema = z
   .object({
@@ -31,6 +32,7 @@ type FormData = z.infer<typeof passwordSchema>;
 
 const PickPasswordPage = () => {
   const router = useRouter();
+  const { setWalletPw, setWalletMnemonic } = useWalletCreate();
 
   const {
     register,
@@ -42,7 +44,8 @@ const PickPasswordPage = () => {
 
   const onSubmit = (data: FormData) => {
     const mnemonic = bip39.generateMnemonic();
-    localStorage.setItem("mnemonic", mnemonic);
+    setWalletMnemonic(mnemonic.split(" "));
+    setWalletPw(data.password);
     router.push("/wallet/new/mnemonic");
   };
 

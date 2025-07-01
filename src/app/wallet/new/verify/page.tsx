@@ -6,20 +6,24 @@ import RadioChoiceBox from "@/components/radio_choice_box";
 import { Alert, Button, Chip, Typography } from "@material-tailwind/react";
 import React, { useEffect, useState } from "react";
 import { FaInfoCircle } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import { useWalletCreate } from "@/states/wallet_creation";
 
 const createValidationSchema = (challenges: any[]) => {
   const shape: Record<string, z.ZodTypeAny> = {};
   challenges.forEach((_, idx) => {
     shape[idx] = z
-      .string({ required_error: "Please select an answer" })
+      .string({ required_error: "Please select an answer for the word" })
       .min(1, "Please select an answer");
   });
   return z.object(shape);
 };
 
 const VerificationPage = () => {
+  const { walletPw, walletMnemonic } = useWalletCreate();
   const [challenges, setChallenges] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const router = useRouter();
 
   // When user selects an answer:
   const handleSelect = (challengeIndex: number, value: string) => {
@@ -45,14 +49,13 @@ const VerificationPage = () => {
   const [errors, setErrors] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    const passPhrases = localStorage.getItem("mnemonic")?.split(" ");
-    if (!passPhrases) {
-      window.location.href = "/wallet/new";
+    if (!walletMnemonic) {
+      router.replace("/wallet/new");
     } else {
       const selectedIndices = getRandomIndices(3, 12);
       const challenges = selectedIndices.map((index) => {
-        const correct = passPhrases?.[index];
-        const options = getRandomOptions(correct as string, passPhrases!);
+        const correct = walletMnemonic?.[index];
+        const options = getRandomOptions(correct as string, walletMnemonic!);
         return {
           index: index + 1, // display as 1-based index (1–12)
           correct,
@@ -62,7 +65,7 @@ const VerificationPage = () => {
       setChallenges(challenges);
       console.log(challenges);
     }
-  }, []);
+  }, [router]);
 
   const handleSubmit = () => {
     const schema = createValidationSchema(challenges);
@@ -126,7 +129,7 @@ const VerificationPage = () => {
             />
           </div>
           {errors[idx] && (
-            <div className="text-red-500 text-sm font-medium">
+            <div className="text-red-500 text-sm font-medium text-center">
               {errors[idx]}
             </div>
           )}
@@ -136,14 +139,15 @@ const VerificationPage = () => {
         <Typography className="font-medium" {...({} as any)}>
           To protect your wallet, we need to verify that you've backed up your
           recovery phrase correctly. Please confirm your backup by selecting the
-          correct words in the next step. This is a critical part of securing
-          access to your funds—if you lose your recovery phrase, you will not be
-          able to recover your wallet.
+          correct words in the next step.
         </Typography>
       </Alert>
-      <div className="flex justify-center">
+      <div className="flex justify-between">
+        <Button color="blue" {...({} as any)} onClick={() => router.back()}>
+          Back
+        </Button>
         <Button color="blue" onClick={handleSubmit} {...({} as any)}>
-          I CONFIRM THAT I HAVE SECURELY SAVED MY RECOVERY PHRASE
+          Confirm
         </Button>
       </div>
     </div>
