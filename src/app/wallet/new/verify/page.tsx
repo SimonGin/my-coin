@@ -1,6 +1,6 @@
 "use client";
 
-import { z } from "zod";
+import { set, z } from "zod";
 import axios from "axios";
 import InfoBox from "@/components/info_box";
 import RadioChoiceBox from "@/components/radio_choice_box";
@@ -16,11 +16,13 @@ import {
   Typography,
 } from "@material-tailwind/react";
 import React, { useEffect, useState } from "react";
+import { FaSquareXmark } from "react-icons/fa6";
 import { TbCopy, TbCopyCheckFilled } from "react-icons/tb";
 import { FaInfoCircle, FaCheckCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useWalletCreate } from "@/states/wallet_creation";
 import { maskedKey } from "@/utils";
+import { getRandomIndices, getRandomOptions } from "@/utils/quiz";
 
 const createValidationSchema = (challenges: any[]) => {
   const shape: Record<string, z.ZodTypeAny> = {};
@@ -33,9 +35,14 @@ const createValidationSchema = (challenges: any[]) => {
 };
 
 const VerificationPage = () => {
-  const { setStep, walletPw, walletMnemonic } = useWalletCreate();
+  const { step, setStep, walletPw, walletMnemonic, resetWalletCreation } =
+    useWalletCreate();
   const [challenges, setChallenges] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [errors, setErrors] = useState<Record<number, string>>({});
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const [openErrorDialog, setOpenErrorDialog] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
   const [privateKey, setPrivateKey] = useState<string>("");
   const router = useRouter();
 
@@ -44,27 +51,8 @@ const VerificationPage = () => {
     setAnswers((prev) => ({ ...prev, [challengeIndex]: value }));
   };
 
-  function getRandomIndices(count: number, max: number): number[] {
-    const indices = new Set<number>();
-    while (indices.size < count) {
-      const rand = Math.floor(Math.random() * max);
-      indices.add(rand);
-    }
-    return Array.from(indices);
-  }
-
-  function getRandomOptions(correctWord: string, allWords: string[]): string[] {
-    const distractors = allWords.filter((w) => w !== correctWord);
-    const shuffled = distractors.sort(() => 0.5 - Math.random()).slice(0, 2);
-    const options = [...shuffled, correctWord];
-    return options.sort(() => 0.5 - Math.random());
-  }
-
-  const [errors, setErrors] = useState<Record<number, string>>({});
-
   useEffect(() => {
-    setStep(3);
-    if (!walletMnemonic) {
+    if (!walletMnemonic || step < 3) {
       router.replace("/wallet/new");
     } else {
       const selectedIndices = getRandomIndices(3, 12);
@@ -80,7 +68,7 @@ const VerificationPage = () => {
       setChallenges(challenges);
       console.log(challenges);
     }
-  }, [router]);
+  }, [router, step]);
 
   const handleSubmit = async () => {
     const schema = createValidationSchema(challenges);
@@ -114,7 +102,6 @@ const VerificationPage = () => {
 
     const allCorrect = challenges.every((c, idx) => answers[idx] === c.correct);
     if (allCorrect) {
-      setStep(4);
       try {
         const response = await axios.post("/api/wallet", {
           mnemonic: walletMnemonic.join(" "),
@@ -126,20 +113,41 @@ const VerificationPage = () => {
         if (response.status === 200) {
           setPrivateKey(response.data.privateKey);
           setOpenDialog(true);
+          setStep(4);
         }
       } catch (error) {
         console.log(error);
       }
     } else {
-      console.log("Some answers are incorrect.");
+      setOpenErrorDialog(true);
     }
   };
 
-  const [openDialog, setOpenDialog] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-
   return (
     <>
+      <Dialog open={openErrorDialog} {...({} as any)}>
+        <DialogHeader
+          className="flex flex-col gap-3 items-center text-red-500 text-3xl"
+          {...({} as any)}
+        >
+          <FaSquareXmark size={100} />
+          Some answers are incorrect
+        </DialogHeader>
+        <DialogBody className="text-center" {...({} as any)}>
+          Please check your mnemonic words you've written down to answer the
+          questions.
+        </DialogBody>
+        <DialogFooter className="flex justify-center" {...({} as any)}>
+          <Button
+            variant="gradient"
+            color="blue"
+            onClick={() => setOpenErrorDialog(false)}
+            {...({} as any)}
+          >
+            <span>Okay let me try again</span>
+          </Button>
+        </DialogFooter>
+      </Dialog>
       <Dialog className="p-9" open={openDialog} size="sm" {...({} as any)}>
         <DialogHeader
           className="flex flex-col gap-3 items-center text-green-500 text-3xl"
@@ -188,7 +196,15 @@ const VerificationPage = () => {
         </div>
 
         <DialogFooter className="flex justify-center" {...({} as any)}>
-          <Button variant="gradient" color="green" {...({} as any)}>
+          <Button
+            variant="gradient"
+            color="green"
+            {...({} as any)}
+            onClick={() => {
+              setOpenDialog(false);
+              router.push("/wallet");
+            }}
+          >
             <span>Great</span>
           </Button>
         </DialogFooter>
@@ -229,7 +245,14 @@ const VerificationPage = () => {
           </Typography>
         </Alert>
         <div className="flex justify-between">
-          <Button color="blue" {...({} as any)} onClick={() => router.back()}>
+          <Button
+            color="blue"
+            {...({} as any)}
+            onClick={() => {
+              setStep(2);
+              router.back();
+            }}
+          >
             Back
           </Button>
           <Button color="blue" onClick={handleSubmit} {...({} as any)}>

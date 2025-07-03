@@ -13,7 +13,6 @@ const MnemonicPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    setStep(2);
     if (walletMnemonic.length > 0) {
       setPassPhrases(walletMnemonic);
     } else {
@@ -25,6 +24,7 @@ const MnemonicPage = () => {
 
   const onContinue = () => {
     router.push("/wallet/new/verify");
+    setStep(3);
   };
 
   return (

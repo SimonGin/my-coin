@@ -34,10 +34,6 @@ const PickPasswordPage = () => {
   const router = useRouter();
   const { setStep, setWalletPw, setWalletMnemonic } = useWalletCreate();
 
-  useEffect(() => {
-    setStep(1);
-  }, []);
-
   const {
     register,
     handleSubmit,
@@ -51,6 +47,7 @@ const PickPasswordPage = () => {
     setWalletMnemonic(mnemonic.split(" "));
     setWalletPw(data.password);
     router.push("/wallet/new/mnemonic");
+    setStep(2);
   };
 
   return (

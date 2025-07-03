@@ -2,6 +2,7 @@
 
 import { useWalletCreate } from "@/states/wallet_creation";
 import { Progress } from "@material-tailwind/react";
+
 import React from "react";
 
 interface Props {

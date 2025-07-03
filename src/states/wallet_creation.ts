@@ -7,13 +7,19 @@ interface WalletCreationState {
   setWalletPw: (password: string) => void;
   walletMnemonic: string[];
   setWalletMnemonic: (mnemonic: string[]) => void;
+  resetWalletCreation: () => void;
 }
 
-export const useWalletCreate = create<WalletCreationState>((set) => ({
+const initialState = {
   step: 0,
-  setStep: (step) => set({ step }),
   walletPw: "",
-  setWalletPw: (password) => set({ walletPw: password }),
   walletMnemonic: [],
+};
+
+export const useWalletCreate = create<WalletCreationState>((set) => ({
+  ...initialState,
+  setStep: (step) => set({ step }),
+  setWalletPw: (password) => set({ walletPw: password }),
   setWalletMnemonic: (mnemonic) => set({ walletMnemonic: mnemonic }),
+  resetWalletCreation: () => set(initialState),
 }));
