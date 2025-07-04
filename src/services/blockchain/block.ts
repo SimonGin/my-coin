@@ -1,17 +1,12 @@
 import crypto from "crypto";
+import { createProofOfWork, runProofOfWork } from "./proof_of_work";
 
 export type Block = {
   timestamp: number;
   data: string;
   prevHash: string;
   hash: string;
-};
-
-const setHash = (block: Block): Block => {
-  const timestamp = block.timestamp.toString();
-  const headers = block.prevHash + block.data + timestamp;
-  const hash = crypto.createHash("sha256").update(headers).digest("hex");
-  return { ...block, hash };
+  nonce: number;
 };
 
 export const createBlock = (data: string, prevHash: string): Block => {
@@ -20,9 +15,16 @@ export const createBlock = (data: string, prevHash: string): Block => {
     data,
     prevHash,
     hash: "",
+    nonce: 0,
   };
 
-  return setHash(newBlock); // ← Fix
+  let pow = createProofOfWork(newBlock);
+  const { nonce, hash } = runProofOfWork(pow);
+
+  newBlock.nonce = nonce;
+  newBlock.hash = hash;
+
+  return newBlock;
 };
 
 export const createGenesisBlock = () => {
@@ -31,6 +33,13 @@ export const createGenesisBlock = () => {
     data: "Genesis Block",
     prevHash: "",
     hash: "",
+    nonce: 0,
   };
-  return setHash(genesisBlock);
+  const headers =
+    genesisBlock.prevHash +
+    genesisBlock.data +
+    genesisBlock.timestamp.toString();
+  const hash = crypto.createHash("sha256").update(headers).digest("hex");
+
+  return { ...genesisBlock, hash };
 };

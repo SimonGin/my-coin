@@ -10,3 +10,10 @@ export const maskedKey = (key: string) => {
     key.slice(key.length - visibleEnd)
   );
 };
+
+export const intToBuffer = (num: number | bigint): Buffer => {
+  // Returns a buffer with big-endian encoding
+  const hex = BigInt(num).toString(16);
+  const paddedHex = hex.length % 2 === 0 ? hex : "0" + hex;
+  return Buffer.from(paddedHex, "hex");
+};
