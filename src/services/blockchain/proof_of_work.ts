@@ -1,39 +1,55 @@
 import { intToBuffer } from "@/utils";
 import crypto from "crypto";
-import type { BlockType } from "@/models/block";
 
 const targetBits = 16;
 const maxNonce = BigInt("9223372036854775807");
 
+export interface RawBlock {
+  index: number;
+  timestamp: number;
+  transactions: any[];
+  prevHash: string;
+  hash: string;
+  nonce: number;
+}
+
 export type ProofOfWork = {
-  block: BlockType;
+  block: RawBlock;
   target: bigint;
 };
 
-export const createProofOfWork = (block: BlockType): ProofOfWork => {
+export const createProofOfWork = (block: RawBlock): ProofOfWork => {
   const target = BigInt(1) << BigInt(256 - targetBits);
   return { block, target };
 };
 
-export const prepareData = (block: BlockType, nonce: number): Buffer => {
-  const encoder = new TextEncoder();
+const hashTransactions = (transactions: any[]): Buffer => {
+  const hashes: Buffer[] = transactions.map((tx) => {
+    if (typeof tx.id === "string") {
+      return Buffer.from(tx.id, "hex");
+    }
+    return tx.id;
+  });
 
-  const prevHashBytes = Buffer.from(block.prevHash ?? "", "hex"); // assuming hash is hex string
-  const dataBytes = encoder.encode(block.data ?? ""); // converts string to Uint8Array
+  const joined = Buffer.concat(hashes);
+  const hash = crypto.createHash("sha256").update(joined).digest();
+  return hash;
+};
 
+export const prepareData = (block: RawBlock, nonce: number): Buffer => {
+  const txHash = hashTransactions(block.transactions);
+  const prevHashBytes = Buffer.from(block.prevHash ?? "", "hex");
   const timestampBytes = intToBuffer(block.timestamp ?? 0);
   const targetBitsBytes = intToBuffer(targetBits);
   const nonceBytes = intToBuffer(nonce);
 
-  const allParts = Buffer.concat([
+  return Buffer.concat([
     prevHashBytes,
-    Buffer.from(dataBytes),
+    txHash,
     timestampBytes,
     targetBitsBytes,
     nonceBytes,
   ]);
-
-  return allParts;
 };
 
 export const runProofOfWork = (pow: ProofOfWork) => {
@@ -41,7 +57,7 @@ export const runProofOfWork = (pow: ProofOfWork) => {
   let hashInt: bigint;
   let finalHash: string = "";
 
-  console.log(`Mining the block containing: "${pow.block.data}"`);
+  console.log(`Mining the block at index ${pow.block.index}...`);
 
   while (nonce < maxNonce) {
     const data = prepareData(pow.block, Number(nonce));
@@ -58,7 +74,7 @@ export const runProofOfWork = (pow: ProofOfWork) => {
     }
   }
 
-  console.log("\n\n");
+  console.log(`\nBlock mined! Hash: ${finalHash}\n`);
 
   return { nonce: Number(nonce), hash: finalHash };
 };
