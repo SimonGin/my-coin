@@ -1,27 +1,27 @@
 import { intToBuffer } from "@/utils";
-import { Block } from "./block";
 import crypto from "crypto";
+import type { BlockType } from "@/models/block";
 
-const targetBits = 8;
+const targetBits = 16;
 const maxNonce = BigInt("9223372036854775807");
 
 export type ProofOfWork = {
-  block: Block;
+  block: BlockType;
   target: bigint;
 };
 
-export const createProofOfWork = (block: Block): ProofOfWork => {
+export const createProofOfWork = (block: BlockType): ProofOfWork => {
   const target = BigInt(1) << BigInt(256 - targetBits);
   return { block, target };
 };
 
-export const prepareData = (block: Block, nonce: number): Buffer => {
+export const prepareData = (block: BlockType, nonce: number): Buffer => {
   const encoder = new TextEncoder();
 
-  const prevHashBytes = Buffer.from(block.prevHash, "hex"); // assuming hash is hex string
-  const dataBytes = encoder.encode(block.data); // converts string to Uint8Array
+  const prevHashBytes = Buffer.from(block.prevHash ?? "", "hex"); // assuming hash is hex string
+  const dataBytes = encoder.encode(block.data ?? ""); // converts string to Uint8Array
 
-  const timestampBytes = intToBuffer(block.timestamp);
+  const timestampBytes = intToBuffer(block.timestamp ?? 0);
   const targetBitsBytes = intToBuffer(targetBits);
   const nonceBytes = intToBuffer(nonce);
 
@@ -64,7 +64,7 @@ export const runProofOfWork = (pow: ProofOfWork) => {
 };
 
 export const validateProofOfWork = (pow: ProofOfWork): boolean => {
-  const data = prepareData(pow.block, pow.block.nonce);
+  const data = prepareData(pow.block, pow.block.nonce ?? 0);
   const hashHex = crypto.createHash("sha256").update(data).digest("hex");
 
   const hashInt = BigInt(`0x${hashHex}`);

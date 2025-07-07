@@ -1,45 +1,55 @@
 import crypto from "crypto";
 import { createProofOfWork, runProofOfWork } from "./proof_of_work";
+import { connectToDatabase } from "@/lib/mongoose";
+import { Block } from "@/models/block";
 
-export type Block = {
-  timestamp: number;
-  data: string;
-  prevHash: string;
-  hash: string;
-  nonce: number;
-};
+export const createBlock = async (data: string): Promise<any> => {
+  await connectToDatabase();
 
-export const createBlock = (data: string, prevHash: string): Block => {
-  const newBlock: Block = {
+  const prevBlock = await Block.findOne().sort({ index: -1 });
+
+  const newBlock = {
+    index: prevBlock ? prevBlock.index + 1 : 1,
     timestamp: Date.now(),
     data,
-    prevHash,
+    prevHash: prevBlock?.hash || "",
     hash: "",
     nonce: 0,
   };
 
-  let pow = createProofOfWork(newBlock);
+  const pow = createProofOfWork(newBlock);
   const { nonce, hash } = runProofOfWork(pow);
 
-  newBlock.nonce = nonce;
   newBlock.hash = hash;
+  newBlock.nonce = nonce;
 
-  return newBlock;
+  const saved = await Block.create(newBlock);
+  return saved;
 };
 
-export const createGenesisBlock = () => {
-  const genesisBlock: Block = {
-    timestamp: Date.now(),
-    data: "Genesis Block",
-    prevHash: "",
-    hash: "",
-    nonce: 0,
-  };
-  const headers =
-    genesisBlock.prevHash +
-    genesisBlock.data +
-    genesisBlock.timestamp.toString();
+export const createGenesisBlock = async () => {
+  await connectToDatabase();
+  const exists = await Block.exists({});
+  if (exists) {
+    return await Block.findOne().sort({ index: 1 }); // already exists
+  }
+
+  const timestamp = Date.now();
+  const data = "Genesis Block";
+  const prevHash = "";
+  const index = 0;
+  const headers = prevHash + data + timestamp.toString();
   const hash = crypto.createHash("sha256").update(headers).digest("hex");
 
-  return { ...genesisBlock, hash };
+  const genesisBlock = {
+    index,
+    timestamp,
+    data,
+    prevHash,
+    hash,
+    nonce: 0,
+  };
+
+  const saved = await Block.create(genesisBlock);
+  return saved;
 };

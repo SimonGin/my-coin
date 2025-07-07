@@ -1,20 +1,15 @@
-import { Block, createBlock, createGenesisBlock } from "./block";
+import { connectToDatabase } from "@/lib/mongoose";
+import { createBlock, createGenesisBlock } from "./block";
+import { Block } from "@/models/block";
 
-export type BlockChain = {
-  blocks: Block[];
-};
+export const insertBlock = async (data: string) => {
+  await connectToDatabase();
 
-export const addBlock = (chain: BlockChain, data: string) => {
-  const prevBlock = chain.blocks[chain.blocks.length - 1];
-  const newBlock = createBlock(data, prevBlock.hash);
+  const count = await Block.countDocuments();
+  if (count === 0) {
+    await createGenesisBlock();
+  }
 
-  chain.blocks.push(newBlock);
-};
-
-export const initBlockchain = () => {
-  const newChain: BlockChain = {
-    blocks: [createGenesisBlock()],
-  };
-
-  return newChain;
+  const newBlock = await createBlock(data);
+  return newBlock;
 };
