@@ -100,3 +100,63 @@ export const getBalance = async (address: string): Promise<number> => {
   const utxos = await findUTXOs(address);
   return utxos.reduce((sum, utxo) => sum + utxo.output.value, 0);
 };
+
+export const findSpendableOutputs = async (address: string, amount: number) => {
+  const utxos = await findUTXOs(address);
+  let accumulated = 0;
+  const used: typeof utxos = [];
+
+  for (const utxo of utxos) {
+    used.push(utxo);
+    accumulated += utxo.output.value;
+    if (accumulated >= amount) break;
+  }
+
+  if (accumulated < amount) {
+    throw new Error("Insufficient funds");
+  }
+
+  return { accumulated, used };
+};
+
+export const createUTXOTransaction = async (
+  from: string,
+  to: string,
+  amount: number
+): Promise<Transaction> => {
+  const { accumulated, used } = await findSpendableOutputs(from, amount);
+
+  const inputs: TXInput[] = used.map(({ txid, index }) => ({
+    txid: Buffer.from(txid, "hex"),
+    vout: index,
+    scriptSig: from,
+  }));
+
+  const outputs: TXOutput[] = [{ value: amount, scriptPubKey: to }];
+
+  // Return change if any
+  if (accumulated > amount) {
+    outputs.push({
+      value: accumulated - amount,
+      scriptPubKey: from,
+    });
+  }
+
+  const tx: Transaction = {
+    id: Buffer.alloc(0),
+    vin: inputs,
+    vout: outputs,
+  };
+
+  const txData = JSON.stringify({
+    vin: inputs.map((i) => ({
+      txid: i.txid.toString("hex"),
+      vout: i.vout,
+      scriptSig: i.scriptSig,
+    })),
+    vout: outputs,
+  });
+
+  tx.id = crypto.createHash("sha256").update(txData).digest();
+  return tx;
+};

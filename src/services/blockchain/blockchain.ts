@@ -2,7 +2,10 @@ import crypto from "crypto";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Block } from "@/models/block";
 import { createProofOfWork, runProofOfWork } from "./proof_of_work";
-import { createCoinbaseTransaction } from "./transaction"; // you must have this helper
+import {
+  createCoinbaseTransaction,
+  createUTXOTransaction,
+} from "./transaction"; // you must have this helper
 
 export const insertBlock = async (
   minerAddress: string,
@@ -66,4 +69,14 @@ export const insertBlock = async (
 
   const savedBlock = await Block.create(newBlock);
   return savedBlock;
+};
+
+export const sendCoinAndMine = async (
+  from: string,
+  to: string,
+  amount: number
+) => {
+  const tx = await createUTXOTransaction(from, to, amount);
+  const block = await insertBlock(from, [tx]); // still reward the miner
+  return block;
 };
