@@ -1,3 +1,4 @@
+import { Block } from "@/models/block";
 import { Buffer } from "buffer";
 import crypto from "crypto";
 
@@ -49,4 +50,53 @@ export const createCoinbaseTransaction = (
   tx.id = crypto.createHash("sha256").update(txData).digest();
 
   return tx;
+};
+
+export const findUTXOs = async (address: string) => {
+  const blocks = await Block.find().sort({ index: 1 }).lean();
+
+  const spentOutpoints = new Set<string>();
+  const utxos: {
+    txid: string;
+    index: number;
+    output: TXOutput;
+  }[] = [];
+
+  for (const block of blocks) {
+    for (const tx of block.transactions as Transaction[]) {
+      const txid = Buffer.isBuffer(tx.id)
+        ? tx.id.toString("hex")
+        : (tx.id as unknown as string); // fallback in case it's not a buffer
+
+      // Mark all inputs as spent
+      for (const input of tx.vin) {
+        if (input.scriptSig === address) {
+          const spentKey = `${Buffer.from(input.txid).toString("hex")}:${
+            input.vout
+          }`;
+          spentOutpoints.add(spentKey);
+        }
+      }
+
+      // Add unspent outputs for this address
+      tx.vout.forEach((out, index) => {
+        if (out.scriptPubKey === address) {
+          const outpoint = `${txid}:${index}`;
+          if (!spentOutpoints.has(outpoint)) {
+            utxos.push({ txid, index, output: out });
+          }
+        }
+      });
+    }
+  }
+
+  return utxos;
+};
+
+/**
+ * Get the total balance for a given address
+ */
+export const getBalance = async (address: string): Promise<number> => {
+  const utxos = await findUTXOs(address);
+  return utxos.reduce((sum, utxo) => sum + utxo.output.value, 0);
 };
