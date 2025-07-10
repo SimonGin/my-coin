@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const wallet = new WalletClass(mnemonic);
-    const privateKeyHex = wallet.privateKey.toString("hex");
+    const privateKeyHex = wallet.privateKey
+      .export({ format: "der", type: "pkcs8" })
+      .toString("hex");
 
     const { encryptedData, iv, salt } = encryptPrivateKey(
       privateKeyHex,
@@ -33,16 +35,14 @@ export async function POST(req: NextRequest) {
       salt,
     };
 
-    console.log("About to create Wallet with:", toCreate);
     await WalletModel.create(toCreate);
 
-    // Return private key (user must save this!)
     return NextResponse.json({
       success: true,
       address: wallet.getAddress(),
       mnemonic: wallet.mnemonic,
       publicKey: wallet.publicKey.toString("hex"),
-      privateKey: privateKeyHex, // One-time return
+      privateKey: privateKeyHex,
     });
   } catch (err: any) {
     return NextResponse.json(

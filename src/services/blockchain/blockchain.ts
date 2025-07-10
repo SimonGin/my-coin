@@ -74,9 +74,24 @@ export const insertBlock = async (
 export const sendCoinAndMine = async (
   from: string,
   to: string,
-  amount: number
+  amount: number,
+  privateKey: string // hex string
 ) => {
-  const tx = await createUTXOTransaction(from, to, amount);
-  const block = await insertBlock(from, [tx]); // still reward the miner
+  const tx = await createUTXOTransaction(from, to, amount, privateKey);
+  const block = await insertBlock(from, [tx]);
+  return block;
+};
+
+export const faucet = async (address: string, amount: number = 10) => {
+  // Create a manual coinbase transaction with custom amount
+  const tx = createCoinbaseTransaction(
+    address,
+    `Faucet reward: ${amount}`,
+    amount
+  );
+
+  // Mine a new block containing just this faucet TX
+  const block = await insertBlock(address, [tx]);
+
   return block;
 };

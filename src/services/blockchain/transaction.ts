@@ -21,7 +21,8 @@ type Transaction = {
 
 export const createCoinbaseTransaction = (
   to: string,
-  data = ""
+  data = "",
+  amount = 10
 ): Transaction => {
   if (!data) {
     data = `Reward to ${to}`;
@@ -34,7 +35,7 @@ export const createCoinbaseTransaction = (
   };
 
   const txout = {
-    value: 10,
+    value: amount,
     scriptPubKey: to,
   };
 
@@ -93,15 +94,12 @@ export const findUTXOs = async (address: string) => {
   return utxos;
 };
 
-/**
- * Get the total balance for a given address
- */
 export const getBalance = async (address: string): Promise<number> => {
   const utxos = await findUTXOs(address);
   return utxos.reduce((sum, utxo) => sum + utxo.output.value, 0);
 };
 
-export const findSpendableOutputs = async (address: string, amount: number) => {
+const findSpendableOutputs = async (address: string, amount: number) => {
   const utxos = await findUTXOs(address);
   let accumulated = 0;
   const used: typeof utxos = [];
@@ -120,43 +118,107 @@ export const findSpendableOutputs = async (address: string, amount: number) => {
 };
 
 export const createUTXOTransaction = async (
-  from: string,
-  to: string,
-  amount: number
+  fromAddress: string,
+  toAddress: string,
+  amount: number,
+  privateKeyHex: string
 ): Promise<Transaction> => {
-  const { accumulated, used } = await findSpendableOutputs(from, amount);
+  const chain = await Block.find().sort({ index: 1 }).lean();
+  const utxos: { txid: Buffer; vout: number; value: number }[] = [];
+  // Find UTXOs belonging to fromAddress
+  for (const block of chain) {
+    for (const tx of block.transactions) {
+      tx.vout.forEach((out: any, index: number) => {
+        const txidHex = Buffer.isBuffer(tx.id)
+          ? tx.id.toString("hex")
+          : Buffer.from(tx.id).toString("hex");
 
-  const inputs: TXInput[] = used.map(({ txid, index }) => ({
-    txid: Buffer.from(txid, "hex"),
-    vout: index,
-    scriptSig: from,
-  }));
+        const spent = chain.some((blk) =>
+          blk.transactions.some((tx2: any) =>
+            tx2.vin.some((input: any) => {
+              const inputTxidHex = Buffer.isBuffer(input.txid)
+                ? input.txid.toString("hex")
+                : Buffer.from(input.txid).toString("hex");
 
-  const outputs: TXOutput[] = [{ value: amount, scriptPubKey: to }];
+              return inputTxidHex === txidHex && input.vout === index;
+            })
+          )
+        );
 
-  // Return change if any
-  if (accumulated > amount) {
-    outputs.push({
-      value: accumulated - amount,
-      scriptPubKey: from,
+        if (!spent && out.scriptPubKey === fromAddress) {
+          utxos.push({
+            txid: Buffer.isBuffer(tx.id) ? tx.id : Buffer.from(tx.id, "hex"),
+            vout: index,
+            value: out.value,
+          });
+        }
+      });
+    }
+  }
+  // Select enough UTXOs
+  let total = 0;
+  const usedUTXOs = [];
+
+  for (const utxo of utxos) {
+    usedUTXOs.push(utxo);
+    total += utxo.value;
+    if (total >= amount) break;
+  }
+
+  if (total < amount) {
+    throw new Error("Not enough balance");
+  }
+
+  // Build TX inputs
+  const vin: TXInput[] = usedUTXOs.map((utxo) => {
+    const dataToSign = Buffer.concat([
+      utxo.txid,
+      Buffer.from(utxo.vout.toString()),
+      Buffer.from(fromAddress),
+    ]);
+
+    const sign = crypto.createSign("SHA256");
+    sign.update(dataToSign);
+    sign.end();
+
+    const keyObj = crypto.createPrivateKey({
+      key: Buffer.from(privateKeyHex, "hex"),
+      format: "der",
+      type: "pkcs8",
+    });
+
+    const signature = sign.sign(keyObj).toString("hex");
+
+    return {
+      txid: utxo.txid,
+      vout: utxo.vout,
+      scriptSig: signature,
+    };
+  });
+
+  // Build TX outputs
+  const vout: TXOutput[] = [{ value: amount, scriptPubKey: toAddress }];
+
+  if (total > amount) {
+    vout.push({
+      value: total - amount,
+      scriptPubKey: fromAddress, // change
     });
   }
 
   const tx: Transaction = {
     id: Buffer.alloc(0),
-    vin: inputs,
-    vout: outputs,
+    vin,
+    vout,
   };
 
-  const txData = JSON.stringify({
-    vin: inputs.map((i) => ({
-      txid: i.txid.toString("hex"),
-      vout: i.vout,
-      scriptSig: i.scriptSig,
-    })),
-    vout: outputs,
-  });
+  // Generate tx ID
+  const vinData = JSON.stringify(vin);
+  const voutData = JSON.stringify(vout);
+  tx.id = crypto
+    .createHash("sha256")
+    .update(vinData + voutData)
+    .digest();
 
-  tx.id = crypto.createHash("sha256").update(txData).digest();
   return tx;
 };

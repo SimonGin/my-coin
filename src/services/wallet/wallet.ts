@@ -4,7 +4,7 @@ import * as bip39 from "bip39";
 export class Wallet {
   mnemonic: string;
   seed: Buffer;
-  privateKey: Buffer; // changed from KeyObject to Buffer
+  privateKey: crypto.KeyObject;
   publicKey: Buffer;
   address: string;
 
@@ -13,18 +13,40 @@ export class Wallet {
     this.seed = bip39.mnemonicToSeedSync(this.mnemonic);
 
     const derivedKey = crypto.createHash("sha256").update(this.seed).digest();
-    console.log("Derived key:", derivedKey.toString("hex"));
+
     const ecdh = crypto.createECDH("prime256v1");
     ecdh.setPrivateKey(derivedKey);
 
-    this.privateKey = ecdh.getPrivateKey(); // 👈 raw EC private key buffer
-    this.publicKey = ecdh.getPublicKey();
+    const rawPrivate = ecdh.getPrivateKey();
+    const rawPublic = ecdh.getPublicKey();
+
+    // Wrap raw private key in a valid EC KeyObject using generateKeyPair
+    const keyPair = crypto.generateKeyPairSync("ec", {
+      namedCurve: "prime256v1",
+      privateKeyEncoding: { format: "der", type: "pkcs8" },
+      publicKeyEncoding: { format: "der", type: "spki" },
+    });
+
+    this.privateKey = crypto.createPrivateKey({
+      key: keyPair.privateKey,
+      format: "der",
+      type: "pkcs8",
+    });
+
+    this.publicKey = crypto
+      .createPublicKey({
+        key: keyPair.publicKey,
+        format: "der",
+        type: "spki",
+      })
+      .export({ format: "der", type: "spki" }) as Buffer;
+
     this.address = Wallet.publicKeyToAddress(this.publicKey);
   }
 
   static publicKeyToAddress(pubKey: Buffer): string {
     const hash = crypto.createHash("sha256").update(pubKey).digest();
-    return hash.toString("hex").slice(0, 40);
+    return hash.toString("hex").slice(0, 40); // Simplified
   }
 
   getAddress(): string {
@@ -35,11 +57,7 @@ export class Wallet {
     const sign = crypto.createSign("SHA256");
     sign.update(data);
     sign.end();
-    return sign.sign({
-      key: this.privateKey,
-      format: "der", // You can change this to "pem" if you export as pem later
-      type: "pkcs8",
-    });
+    return sign.sign(this.privateKey); // now safe
   }
 
   export(): {
@@ -52,7 +70,9 @@ export class Wallet {
       address: this.address,
       mnemonic: this.mnemonic,
       publicKey: this.publicKey.toString("hex"),
-      privateKey: this.privateKey.toString("hex"), // 👈 just raw hex
+      privateKey: this.privateKey
+        .export({ format: "der", type: "pkcs8" })
+        .toString("hex"), // ✅ Convert buffer to hex
     };
   }
 }
