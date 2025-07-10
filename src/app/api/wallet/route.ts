@@ -1,49 +1,53 @@
-import { NextResponse } from "next/server";
-import { HDNodeWallet, Mnemonic } from "ethers";
-import * as bip39 from "bip39";
-import crypto from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { Wallet as WalletClass } from "@/services/wallet/wallet";
+import { Wallet as WalletModel } from "@/models/wallet";
+import { encryptPrivateKey } from "@/utils/crypto";
+import { connectToDatabase } from "@/lib/mongoose";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  await connectToDatabase();
+
+  const { mnemonic, password } = await req.json();
+
+  if (!mnemonic || !password) {
+    return NextResponse.json(
+      { success: false, error: "Mnemonic and password are required" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const body = await req.json();
-    const { mnemonic, password } = body;
+    const wallet = new WalletClass(mnemonic);
+    const privateKeyHex = wallet.privateKey.toString("hex");
 
-    if (!mnemonic || !password) {
-      return NextResponse.json(
-        { error: "Mnemonic and password are required." },
-        { status: 400 }
-      );
-    }
+    const { encryptedData, iv, salt } = encryptPrivateKey(
+      privateKeyHex,
+      password
+    );
 
-    // 1. Validate mnemonic
-    if (!bip39.validateMnemonic(mnemonic)) {
-      return NextResponse.json({ error: "Invalid mnemonic." }, { status: 400 });
-    }
+    const toCreate = {
+      address: wallet.getAddress(),
+      publicKey: wallet.publicKey.toString("hex"),
+      encryptedPrivateKey: encryptedData,
+      iv,
+      salt,
+    };
 
-    // 2. Derive wallet from mnemonic
-    const mnemonicObj = Mnemonic.fromPhrase(mnemonic);
-    const wallet = HDNodeWallet.fromMnemonic(mnemonicObj);
-    const publicAddress = wallet.address;
-    const privateKey = wallet.privateKey;
+    console.log("About to create Wallet with:", toCreate);
+    await WalletModel.create(toCreate);
 
-    // 3. Encrypt mnemonic
-    const iv = crypto.randomBytes(16);
-    const salt = crypto.randomBytes(16);
-    const key = crypto.scryptSync(password, salt, 32);
-    const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
-    let encrypted = cipher.update(mnemonic, "utf8", "hex");
-    encrypted += cipher.final("hex");
-
-    // 4. Return to client (you may also store this securely)
+    // Return private key (user must save this!)
     return NextResponse.json({
-      publicAddress,
-      privateKey,
-      encryptedMnemonic: encrypted,
-      iv: iv.toString("hex"),
-      salt: salt.toString("hex"),
+      success: true,
+      address: wallet.getAddress(),
+      mnemonic: wallet.mnemonic,
+      publicKey: wallet.publicKey.toString("hex"),
+      privateKey: privateKeyHex, // One-time return
     });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err.message },
+      { status: 500 }
+    );
   }
 }
