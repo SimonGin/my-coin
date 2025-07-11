@@ -1,6 +1,8 @@
 import { Block } from "@/models/block";
 import { Buffer } from "buffer";
 import crypto from "crypto";
+import { ec as EC } from "elliptic";
+const ec = new EC("p256");
 
 type TXInput = {
   txid: Buffer;
@@ -125,7 +127,7 @@ export const createUTXOTransaction = async (
 ): Promise<Transaction> => {
   const chain = await Block.find().sort({ index: 1 }).lean();
   const utxos: { txid: Buffer; vout: number; value: number }[] = [];
-  // Find UTXOs belonging to fromAddress
+
   for (const block of chain) {
     for (const tx of block.transactions) {
       tx.vout.forEach((out: any, index: number) => {
@@ -155,6 +157,7 @@ export const createUTXOTransaction = async (
       });
     }
   }
+
   // Select enough UTXOs
   let total = 0;
   const usedUTXOs = [];
@@ -169,7 +172,9 @@ export const createUTXOTransaction = async (
     throw new Error("Not enough balance");
   }
 
-  // Build TX inputs
+  // Build TX inputs using elliptic to sign
+  const key = ec.keyFromPrivate(privateKeyHex, "hex");
+
   const vin: TXInput[] = usedUTXOs.map((utxo) => {
     const dataToSign = Buffer.concat([
       utxo.txid,
@@ -177,42 +182,34 @@ export const createUTXOTransaction = async (
       Buffer.from(fromAddress),
     ]);
 
-    const sign = crypto.createSign("SHA256");
-    sign.update(dataToSign);
-    sign.end();
-
-    const keyObj = crypto.createPrivateKey({
-      key: Buffer.from(privateKeyHex, "hex"),
-      format: "der",
-      type: "pkcs8",
-    });
-
-    const signature = sign.sign(keyObj).toString("hex");
+    const hash = crypto.createHash("sha256").update(dataToSign).digest();
+    const signature = key.sign(hash);
+    const signatureHex = signature.toDER("hex");
 
     return {
       txid: utxo.txid,
       vout: utxo.vout,
-      scriptSig: signature,
+      scriptSig: signatureHex,
     };
   });
 
-  // Build TX outputs
+  // Build outputs
   const vout: TXOutput[] = [{ value: amount, scriptPubKey: toAddress }];
 
   if (total > amount) {
     vout.push({
       value: total - amount,
-      scriptPubKey: fromAddress, // change
+      scriptPubKey: fromAddress,
     });
   }
 
+  // Final TX
   const tx: Transaction = {
     id: Buffer.alloc(0),
     vin,
     vout,
   };
 
-  // Generate tx ID
   const vinData = JSON.stringify(vin);
   const voutData = JSON.stringify(vout);
   tx.id = crypto

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Wallet as WalletClass } from "@/services/wallet/wallet";
+import { Wallet as WalletClass } from "@/services/wallet/wallet"; // updated elliptic version
 import { Wallet as WalletModel } from "@/models/wallet";
 import { encryptPrivateKey } from "@/utils/crypto";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -17,36 +17,40 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const wallet = new WalletClass(mnemonic);
-    const privateKeyHex = wallet.privateKey
-      .export({ format: "der", type: "pkcs8" })
-      .toString("hex");
+    // Generate deterministic wallet from mnemonic + password
+    const wallet = new WalletClass(mnemonic, password);
 
+    // Encrypt the raw private key (already hex string)
     const { encryptedData, iv, salt } = encryptPrivateKey(
-      privateKeyHex,
+      wallet.privateKey,
       password
     );
 
     const toCreate = {
       address: wallet.getAddress(),
-      publicKey: wallet.publicKey.toString("hex"),
+      publicKey: wallet.publicKey,
       encryptedPrivateKey: encryptedData,
       iv,
       salt,
     };
 
-    await WalletModel.create(toCreate);
+    // Store or update wallet in database
+    await WalletModel.findOneAndUpdate(
+      { address: wallet.getAddress() },
+      toCreate,
+      { upsert: true, new: true }
+    );
 
     return NextResponse.json({
       success: true,
       address: wallet.getAddress(),
       mnemonic: wallet.mnemonic,
-      publicKey: wallet.publicKey.toString("hex"),
-      privateKey: privateKeyHex,
+      publicKey: wallet.publicKey,
+      privateKey: wallet.privateKey, // Optional: consider removing in prod
     });
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Internal server error" },
       { status: 500 }
     );
   }

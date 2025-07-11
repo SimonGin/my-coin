@@ -1,78 +1,54 @@
-import crypto from "crypto";
 import * as bip39 from "bip39";
+import { ec as EC } from "elliptic";
+import crypto from "crypto";
+
+const ec = new EC("p256"); // Same as prime256v1
 
 export class Wallet {
   mnemonic: string;
   seed: Buffer;
-  privateKey: crypto.KeyObject;
-  publicKey: Buffer;
+  privateKey: string;
+  publicKey: string;
   address: string;
 
-  constructor(mnemonic?: string) {
-    this.mnemonic = mnemonic || bip39.generateMnemonic();
-    this.seed = bip39.mnemonicToSeedSync(this.mnemonic);
+  constructor(mnemonic: string, password: string) {
+    this.mnemonic = mnemonic;
+    this.seed = bip39.mnemonicToSeedSync(mnemonic, password); // Password acts like passphrase
 
-    const derivedKey = crypto.createHash("sha256").update(this.seed).digest();
+    // Derive 32-byte private key deterministically from the seed
+    const hash = crypto.createHash("sha256").update(this.seed).digest("hex");
 
-    const ecdh = crypto.createECDH("prime256v1");
-    ecdh.setPrivateKey(derivedKey);
+    // Generate EC key pair from derived private key
+    const keyPair = ec.keyFromPrivate(hash);
 
-    const rawPrivate = ecdh.getPrivateKey();
-    const rawPublic = ecdh.getPublicKey();
+    this.privateKey = keyPair.getPrivate("hex");
+    this.publicKey = keyPair.getPublic("hex");
 
-    // Wrap raw private key in a valid EC KeyObject using generateKeyPair
-    const keyPair = crypto.generateKeyPairSync("ec", {
-      namedCurve: "prime256v1",
-      privateKeyEncoding: { format: "der", type: "pkcs8" },
-      publicKeyEncoding: { format: "der", type: "spki" },
-    });
-
-    this.privateKey = crypto.createPrivateKey({
-      key: keyPair.privateKey,
-      format: "der",
-      type: "pkcs8",
-    });
-
-    this.publicKey = crypto
-      .createPublicKey({
-        key: keyPair.publicKey,
-        format: "der",
-        type: "spki",
-      })
-      .export({ format: "der", type: "spki" }) as Buffer;
-
-    this.address = Wallet.publicKeyToAddress(this.publicKey);
-  }
-
-  static publicKeyToAddress(pubKey: Buffer): string {
-    const hash = crypto.createHash("sha256").update(pubKey).digest();
-    return hash.toString("hex").slice(0, 40); // Simplified
+    // Derive address (simplified: first 40 hex chars of SHA-256 of public key)
+    const pubKeyBuffer = Buffer.from(this.publicKey, "hex");
+    const addressHash = crypto
+      .createHash("sha256")
+      .update(pubKeyBuffer)
+      .digest("hex");
+    this.address = addressHash.slice(0, 40); // Just an example — customize as needed
   }
 
   getAddress(): string {
     return this.address;
   }
 
-  sign(data: Buffer): Buffer {
-    const sign = crypto.createSign("SHA256");
-    sign.update(data);
-    sign.end();
-    return sign.sign(this.privateKey); // now safe
+  sign(data: Buffer): string {
+    const keyPair = ec.keyFromPrivate(this.privateKey, "hex");
+    const signature = keyPair.sign(data);
+    return signature.toDER("hex"); // Compact hex format
   }
 
-  export(): {
-    address: string;
-    mnemonic: string;
-    publicKey: string;
-    privateKey: string;
-  } {
+  export() {
     return {
       address: this.address,
       mnemonic: this.mnemonic,
-      publicKey: this.publicKey.toString("hex"),
-      privateKey: this.privateKey
-        .export({ format: "der", type: "pkcs8" })
-        .toString("hex"), // ✅ Convert buffer to hex
+      privateKey: this.privateKey,
+      publicKey: this.publicKey,
     };
   }
 }
