@@ -7,7 +7,10 @@ const ec = new EC("p256");
 type TXInput = {
   txid: Buffer;
   vout: number;
-  scriptSig: string;
+  scriptSig: {
+    pubKey: string;
+    signature: string;
+  };
 };
 
 type TXOutput = {
@@ -33,7 +36,10 @@ export const createCoinbaseTransaction = (
   const txin = {
     txid: Buffer.alloc(0),
     vout: -1,
-    scriptSig: data,
+    scriptSig: {
+      pubKey: "",
+      signature: data,
+    },
   };
 
   const txout = {
@@ -69,19 +75,28 @@ export const findUTXOs = async (address: string) => {
     for (const tx of block.transactions as Transaction[]) {
       const txid = Buffer.isBuffer(tx.id)
         ? tx.id.toString("hex")
-        : (tx.id as unknown as string); // fallback in case it's not a buffer
+        : (tx.id as unknown as string);
 
-      // Mark all inputs as spent
       for (const input of tx.vin) {
-        if (input.scriptSig === address) {
-          const spentKey = `${Buffer.from(input.txid).toString("hex")}:${
-            input.vout
-          }`;
-          spentOutpoints.add(spentKey);
+        try {
+          const pubKey = input.scriptSig?.pubKey;
+          const derivedAddress = crypto
+            .createHash("sha256")
+            .update(Buffer.from(pubKey, "hex"))
+            .digest("hex")
+            .slice(0, 40);
+
+          if (derivedAddress === address) {
+            const spentKey = `${Buffer.from(input.txid).toString("hex")}:${
+              input.vout
+            }`;
+            spentOutpoints.add(spentKey);
+          }
+        } catch (_) {
+          continue;
         }
       }
 
-      // Add unspent outputs for this address
       tx.vout.forEach((out, index) => {
         if (out.scriptPubKey === address) {
           const outpoint = `${txid}:${index}`;
@@ -125,60 +140,18 @@ export const createUTXOTransaction = async (
   amount: number,
   privateKeyHex: string
 ): Promise<Transaction> => {
-  const chain = await Block.find().sort({ index: 1 }).lean();
-  const utxos: { txid: Buffer; vout: number; value: number }[] = [];
+  const { used: usedUTXOs, accumulated: total } = await findSpendableOutputs(
+    fromAddress,
+    amount
+  );
 
-  for (const block of chain) {
-    for (const tx of block.transactions) {
-      tx.vout.forEach((out: any, index: number) => {
-        const txidHex = Buffer.isBuffer(tx.id)
-          ? tx.id.toString("hex")
-          : Buffer.from(tx.id).toString("hex");
-
-        const spent = chain.some((blk) =>
-          blk.transactions.some((tx2: any) =>
-            tx2.vin.some((input: any) => {
-              const inputTxidHex = Buffer.isBuffer(input.txid)
-                ? input.txid.toString("hex")
-                : Buffer.from(input.txid).toString("hex");
-
-              return inputTxidHex === txidHex && input.vout === index;
-            })
-          )
-        );
-
-        if (!spent && out.scriptPubKey === fromAddress) {
-          utxos.push({
-            txid: Buffer.isBuffer(tx.id) ? tx.id : Buffer.from(tx.id, "hex"),
-            vout: index,
-            value: out.value,
-          });
-        }
-      });
-    }
-  }
-
-  // Select enough UTXOs
-  let total = 0;
-  const usedUTXOs = [];
-
-  for (const utxo of utxos) {
-    usedUTXOs.push(utxo);
-    total += utxo.value;
-    if (total >= amount) break;
-  }
-
-  if (total < amount) {
-    throw new Error("Not enough balance");
-  }
-
-  // Build TX inputs using elliptic to sign
   const key = ec.keyFromPrivate(privateKeyHex, "hex");
+  const pubKeyHex = key.getPublic("hex");
 
   const vin: TXInput[] = usedUTXOs.map((utxo) => {
     const dataToSign = Buffer.concat([
-      utxo.txid,
-      Buffer.from(utxo.vout.toString()),
+      Buffer.from(utxo.txid, "hex"),
+      Buffer.from(utxo.index.toString()),
       Buffer.from(fromAddress),
     ]);
 
@@ -187,13 +160,15 @@ export const createUTXOTransaction = async (
     const signatureHex = signature.toDER("hex");
 
     return {
-      txid: utxo.txid,
-      vout: utxo.vout,
-      scriptSig: signatureHex,
+      txid: Buffer.from(utxo.txid, "hex"),
+      vout: utxo.index,
+      scriptSig: {
+        pubKey: pubKeyHex,
+        signature: signatureHex,
+      },
     };
   });
 
-  // Build outputs
   const vout: TXOutput[] = [{ value: amount, scriptPubKey: toAddress }];
 
   if (total > amount) {
@@ -203,7 +178,6 @@ export const createUTXOTransaction = async (
     });
   }
 
-  // Final TX
   const tx: Transaction = {
     id: Buffer.alloc(0),
     vin,

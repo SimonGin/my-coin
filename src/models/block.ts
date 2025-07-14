@@ -3,7 +3,13 @@ import mongoose, { InferSchemaType, Schema } from "mongoose";
 const TXInputSchema = new Schema({
   txid: Buffer,
   vout: Number,
-  scriptSig: String,
+  scriptSig: {
+    type: {
+      pubKey: String,
+      signature: String,
+    },
+    required: true,
+  },
 });
 
 const TXOutputSchema = new Schema({

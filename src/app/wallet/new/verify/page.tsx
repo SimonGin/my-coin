@@ -1,6 +1,6 @@
 "use client";
 
-import { set, z } from "zod";
+import { z } from "zod";
 import axios from "axios";
 import InfoBox from "@/components/info_box";
 import RadioChoiceBox from "@/components/radio_choice_box";

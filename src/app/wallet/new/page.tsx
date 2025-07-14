@@ -9,7 +9,6 @@ const NewWalletPage = () => {
   const router = useRouter();
   useEffect(() => {
     if (step === 0) {
-      console.log(step);
       setStep(1);
       router.replace("/wallet/new/pick-pw");
     }
