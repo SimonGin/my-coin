@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Block } from "@/models/block";
 import crypto from "crypto";
+import { getBalance } from "@/services/blockchain/transaction";
 
 // Helper to derive address from a hex‐encoded public key
 function addressFromPubKey(pubKeyHex: string): string {
@@ -14,6 +15,8 @@ function addressFromPubKey(pubKeyHex: string): string {
 export async function GET(req: NextRequest) {
   const url = req.nextUrl;
   const target = url.searchParams.get("address");
+  const page = parseInt(url.searchParams.get("page") || "1", 10);
+  const limit = parseInt(url.searchParams.get("limit") || "10", 10);
   if (!target) {
     return NextResponse.json(
       { error: "Missing ?address= parameter" },
@@ -94,6 +97,17 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  history.sort((a, b) => a.timestamp - b.timestamp);
-  return NextResponse.json({ address: target, history });
+  const balance = await getBalance(target);
+  history.sort((a, b) => b.timestamp - a.timestamp);
+
+  // Implement pagination
+  const startIndex = (page - 1) * limit;
+  const paginatedHistory = history.slice(startIndex, startIndex + limit);
+
+  return NextResponse.json({
+    address: target,
+    balance,
+    history: paginatedHistory,
+    total: history.length,
+  });
 }

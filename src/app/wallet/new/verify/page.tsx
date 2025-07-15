@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useWalletCreate } from "@/states/wallet_creation";
 import { maskedKey } from "@/utils";
 import { getRandomIndices, getRandomOptions } from "@/utils/quiz";
+import { useWallet } from "@/states/wallet";
 
 const createValidationSchema = (challenges: any[]) => {
   const shape: Record<string, z.ZodTypeAny> = {};
@@ -35,8 +36,8 @@ const createValidationSchema = (challenges: any[]) => {
 };
 
 const VerificationPage = () => {
-  const { step, setStep, walletPw, walletMnemonic, resetWalletCreation } =
-    useWalletCreate();
+  const { step, setStep, walletPw, walletMnemonic } = useWalletCreate();
+  const { setWalletAddress } = useWallet();
   const [challenges, setChallenges] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
@@ -44,6 +45,7 @@ const VerificationPage = () => {
   const [openErrorDialog, setOpenErrorDialog] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [privateKey, setPrivateKey] = useState<string>("");
+  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>("");
   const router = useRouter();
 
   // When user selects an answer:
@@ -111,6 +113,7 @@ const VerificationPage = () => {
         // Success response
         console.log("Wallet created successfully:", response.data);
         if (response.status === 200) {
+          setCurrentWalletAddress(response.data.address);
           setPrivateKey(response.data.privateKey);
           setOpenDialog(true);
           setStep(4);
@@ -202,6 +205,7 @@ const VerificationPage = () => {
             {...({} as any)}
             onClick={() => {
               setOpenDialog(false);
+              setWalletAddress(currentWalletAddress);
               router.push("/wallet");
             }}
           >
