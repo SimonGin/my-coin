@@ -3,7 +3,6 @@
 import InfoBox from "@/components/info_box";
 import PasswordInput from "@/components/pw_input";
 import { Alert, Button, Typography } from "@material-tailwind/react";
-import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";

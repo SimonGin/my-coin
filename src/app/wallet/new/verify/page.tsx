@@ -206,7 +206,7 @@ const VerificationPage = () => {
             onClick={() => {
               setOpenDialog(false);
               setWalletAddress(currentWalletAddress);
-              router.push("/wallet");
+              router.push("/wallet/me");
             }}
           >
             <span>Great</span>
