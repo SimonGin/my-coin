@@ -1,16 +1,36 @@
 "use client";
 
 import { CiCoinInsert } from "react-icons/ci";
-import { Button, Card, CardBody, Chip } from "@material-tailwind/react";
+import { Button, Card, CardBody } from "@material-tailwind/react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/states/wallet";
 import BlockRow from "@/components/block_row";
 import TransactionRow from "@/components/transaction_row";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { Block } from "@/types/block";
 
 const App = () => {
+  const [blockHistory, setBlockHistory] = useState<Block[]>([]);
   const { setWalletAddress } = useWallet();
 
   const router = useRouter();
+
+  useEffect(() => {
+    fetchBlockHistory();
+  }, []);
+
+  const fetchBlockHistory = async () => {
+    try {
+      const response = await axios.get("/api/history/blocks");
+      if (response.status === 200) {
+        setBlockHistory(response.data.blocks);
+      }
+    } catch (error) {
+      console.error("Failed to fetch block history:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -47,10 +67,9 @@ const App = () => {
           <CardBody className="flex flex-col gap-3" {...({} as any)}>
             <h1 className="text-3xl font-black">Recent Blocks</h1>
             <div>
-              <BlockRow />
-              <BlockRow />
-              <BlockRow />
-              <BlockRow />
+              {blockHistory.map((block, index) => (
+                <BlockRow key={index} block={block} />
+              ))}
             </div>
           </CardBody>
         </Card>
