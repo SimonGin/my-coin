@@ -12,12 +12,14 @@ import { Block } from "@/types/block";
 
 const App = () => {
   const [blockHistory, setBlockHistory] = useState<Block[]>([]);
+  const [transactionHistory, setTransactionHistory] = useState<[]>([]);
   const { setWalletAddress } = useWallet();
 
   const router = useRouter();
 
   useEffect(() => {
     fetchBlockHistory();
+    fetchTransactionHistory();
   }, []);
 
   const fetchBlockHistory = async () => {
@@ -25,6 +27,17 @@ const App = () => {
       const response = await axios.get("/api/history/blocks");
       if (response.status === 200) {
         setBlockHistory(response.data.blocks);
+      }
+    } catch (error) {
+      console.error("Failed to fetch block history:", error);
+    }
+  };
+
+  const fetchTransactionHistory = async () => {
+    try {
+      const response = await axios.get("/api/history/transactions");
+      if (response.status === 200) {
+        setTransactionHistory(response.data.transactions);
       }
     } catch (error) {
       console.error("Failed to fetch block history:", error);
@@ -80,10 +93,9 @@ const App = () => {
           <CardBody className="flex flex-col gap-3" {...({} as any)}>
             <h1 className="text-3xl font-black">Recent Transactions</h1>
             <div>
-              <TransactionRow />
-              <TransactionRow />
-              <TransactionRow />
-              <TransactionRow />
+              {transactionHistory.map((transaction, index) => (
+                <TransactionRow key={index} transaction={transaction} />
+              ))}
             </div>
           </CardBody>
         </Card>

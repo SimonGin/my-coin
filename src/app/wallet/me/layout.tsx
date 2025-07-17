@@ -10,13 +10,15 @@ import { FaWallet } from "react-icons/fa";
 import { FaCoins } from "react-icons/fa";
 import { RiCoinsLine } from "react-icons/ri";
 import { TbCopy, TbCopyCheckFilled } from "react-icons/tb";
+import axios from "axios";
 
 interface Props {
   children: React.ReactNode;
 }
 
 const myWalletLayout = ({ children }: Props) => {
-  const { walletBalance, walletAddress, setWalletAddress } = useWallet();
+  const { setWalletBalance, walletBalance, walletAddress, setWalletAddress } =
+    useWallet();
   const { resetWalletCreation } = useWalletCreate();
   const router = useRouter();
   const [copied, setCopied] = useState<boolean>(false);
@@ -24,10 +26,26 @@ const myWalletLayout = ({ children }: Props) => {
   useEffect(() => {
     setWalletAddress("71cf87eb4e5232d92e3a5296c1ff78e949e27cf7");
     resetWalletCreation();
+    if (walletAddress) {
+      fetchBalance();
+    }
     // if (!walletAddress) {
     //   router.replace("/wallet/new");
     // }
   }, [walletAddress]);
+
+  const fetchBalance = async () => {
+    try {
+      const response = await axios.get(
+        `/api/wallet/balance?address=${walletAddress}`
+      );
+      if (response.status === 200) {
+        setWalletBalance(response.data.balance);
+      }
+    } catch (error) {
+      console.error("Failed to fetch wallet balance:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">

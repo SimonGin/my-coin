@@ -14,7 +14,7 @@ const TABLE_HEAD = ["Transaction", "Amount", "Type", "From/To", "Time"];
 const ITEMS_PER_PAGE = 5;
 
 const MyWalletPage = () => {
-  const { walletAddress, setWalletBalance } = useWallet();
+  const { walletAddress } = useWallet();
   const router = useRouter();
 
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -34,13 +34,12 @@ const MyWalletPage = () => {
   const fetchHistory = async () => {
     try {
       const response = await axios.get(
-        `/api/wallet/history?address=${walletAddress}&page=${currentPage}&limit=${ITEMS_PER_PAGE}`
+        `/api/history/transactions?address=${walletAddress}&page=${currentPage}&limit=${ITEMS_PER_PAGE}`
       );
       if (response.status === 200) {
         const total_pages = Math.ceil(response.data.total / ITEMS_PER_PAGE);
         setTotalPages(total_pages);
-        setTransactions(response.data.history);
-        setWalletBalance(response.data.balance);
+        setTransactions(response.data.transactions);
       }
     } catch (error) {
       console.error("Failed to fetch wallet history:", error);
@@ -97,14 +96,17 @@ const MyWalletPage = () => {
                 </thead>
                 <tbody>
                   {transactions?.map(
-                    ({ id, timestamp, type, from, to, amount }, index) => {
+                    ({ txid, timestamp, from, to, amount }, index) => {
                       const isLast = index === transactions.length - 1;
                       const classes = isLast
                         ? "p-4"
                         : "p-4 border-b border-blue-gray-50";
 
                       return (
-                        <tr key={`${id}-${index}`}>
+                        <tr
+                          key={`${txid}-${index}`}
+                          className="hover:bg-blue-gray-50"
+                        >
                           <td className={classes}>
                             <Typography
                               variant="small"
@@ -112,7 +114,7 @@ const MyWalletPage = () => {
                               className="font-normal"
                               {...({} as any)}
                             >
-                              {id}
+                              {txid}
                             </Typography>
                           </td>
                           <td className={classes}>
@@ -122,7 +124,9 @@ const MyWalletPage = () => {
                               className="font-normal"
                               {...({} as any)}
                             >
-                              {type === "sent" ? `- ${amount}` : `+ ${amount}`}
+                              {from === walletAddress
+                                ? `- ${amount} MyC`
+                                : `+ ${amount} MyC`}
                             </Typography>
                           </td>
                           <td className={classes}>
@@ -133,7 +137,7 @@ const MyWalletPage = () => {
                               {...({} as any)}
                             >
                               <span className="flex items-center gap-1">
-                                {type === "sent" ? (
+                                {from === walletAddress ? (
                                   <>
                                     <FaArrowUp color="red" />
                                     Send
@@ -154,7 +158,7 @@ const MyWalletPage = () => {
                               className="font-normal"
                               {...({} as any)}
                             >
-                              {type === "sent"
+                              {from === walletAddress
                                 ? maskedAddress(to)
                                 : maskedAddress(from)}
                             </Typography>
