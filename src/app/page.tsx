@@ -1,7 +1,7 @@
 "use client";
 
 import { CiCoinInsert } from "react-icons/ci";
-import { Button, Card, CardBody } from "@material-tailwind/react";
+import { Button, Card, CardBody, Spinner } from "@material-tailwind/react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/states/wallet";
 import BlockRow from "@/components/block_row";
@@ -9,37 +9,64 @@ import TransactionRow from "@/components/transaction_row";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Block } from "@/types/block";
+import Pagination from "@/components/pagination";
+import { GrPowerReset } from "react-icons/gr";
+
+const ITEMS_PER_PAGE = 8;
 
 const App = () => {
   const [blockHistory, setBlockHistory] = useState<Block[]>([]);
-  const [transactionHistory, setTransactionHistory] = useState<[]>([]);
+  const [currentBlockPage, setCurrentBlockPage] = useState(1);
+  const [totalBlockPages, setTotalBlockPages] = useState(1);
+  const [refetchBlocks, setRefetchBlocks] = useState(false);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
+  const [txHistory, setTxHistory] = useState<[]>([]);
+  const [currentTxPage, setCurrentTxPage] = useState(1);
+  const [totalTxPages, setTotalTxPages] = useState(1);
+  const [refetchTx, setRefetchTx] = useState(false);
+  const [loadingTx, setLoadingTx] = useState(false);
   const { setWalletAddress } = useWallet();
 
   const router = useRouter();
 
   useEffect(() => {
     fetchBlockHistory();
+  }, [currentBlockPage, refetchBlocks]);
+
+  useEffect(() => {
     fetchTransactionHistory();
-  }, []);
+  }, [currentTxPage, refetchTx]);
 
   const fetchBlockHistory = async () => {
     try {
-      const response = await axios.get("/api/history/blocks");
+      setLoadingBlocks(true);
+      const response = await axios.get(
+        `/api/history/blocks?page=${currentBlockPage}&limit=${ITEMS_PER_PAGE}`
+      );
       if (response.status === 200) {
         setBlockHistory(response.data.blocks);
+        setTotalBlockPages(response.data.totalPages);
+        setLoadingBlocks(false);
       }
     } catch (error) {
+      setLoadingBlocks(false);
       console.error("Failed to fetch block history:", error);
     }
   };
 
   const fetchTransactionHistory = async () => {
     try {
-      const response = await axios.get("/api/history/transactions");
+      setLoadingTx(true);
+      const response = await axios.get(
+        `/api/history/transactions?page=${currentTxPage}&limit=${ITEMS_PER_PAGE}`
+      );
       if (response.status === 200) {
-        setTransactionHistory(response.data.transactions);
+        setTxHistory(response.data.transactions);
+        setTotalTxPages(response.data.totalPages);
+        setLoadingTx(false);
       }
     } catch (error) {
+      setLoadingTx(false);
       console.error("Failed to fetch block history:", error);
     }
   };
@@ -78,26 +105,66 @@ const App = () => {
           {...({} as any)}
         >
           <CardBody className="flex flex-col gap-3" {...({} as any)}>
-            <h1 className="text-3xl font-black">Recent Blocks</h1>
+            <div className="flex justify-between">
+              <h1 className="text-3xl font-black">Recent Blocks</h1>
+              {loadingBlocks ? (
+                <Spinner color="blue" {...({} as any)} />
+              ) : (
+                <Button
+                  {...({} as any)}
+                  color="blue"
+                  onClick={() => setRefetchBlocks(!refetchBlocks)}
+                >
+                  <GrPowerReset />
+                </Button>
+              )}
+            </div>
             <div>
               {blockHistory.map((block, index) => (
                 <BlockRow key={index} block={block} />
               ))}
             </div>
           </CardBody>
+          <div className="flex justify-center">
+            <Pagination
+              currentPage={currentBlockPage}
+              setCurrentPage={setCurrentBlockPage}
+              totalPages={totalBlockPages}
+            />
+          </div>
         </Card>
         <Card
           className="border border-gray-300 shadow-sm text-black w-full md:w-1/2"
           {...({} as any)}
         >
           <CardBody className="flex flex-col gap-3" {...({} as any)}>
-            <h1 className="text-3xl font-black">Recent Transactions</h1>
+            <div className="flex justify-between">
+              <h1 className="text-3xl font-black">Recent Transactions</h1>
+              {loadingTx ? (
+                <Spinner color="blue" {...({} as any)} />
+              ) : (
+                <Button
+                  {...({} as any)}
+                  color="blue"
+                  onClick={() => setRefetchTx(!refetchTx)}
+                >
+                  <GrPowerReset />
+                </Button>
+              )}
+            </div>
             <div>
-              {transactionHistory.map((transaction, index) => (
+              {txHistory.map((transaction, index) => (
                 <TransactionRow key={index} transaction={transaction} />
               ))}
             </div>
           </CardBody>
+          <div className="flex justify-center">
+            <Pagination
+              currentPage={currentTxPage}
+              setCurrentPage={setCurrentTxPage}
+              totalPages={totalTxPages}
+            />
+          </div>
         </Card>
       </div>
     </div>
