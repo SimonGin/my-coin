@@ -1,5 +1,6 @@
 "use client";
 
+import Cookies from "js-cookie";
 import InfoBox from "@/components/info_box";
 import PasswordInput from "@/components/pw_input";
 import { useWallet } from "@/states/wallet";
@@ -50,6 +51,7 @@ const LoginPage = () => {
         { withCredentials: true }
       );
       if (response.status === 200) {
+        Cookies.set("accessToken", response.data.token);
         setOpenSuccessDialog(true);
       } else {
         console.error("Login failed:", response.data);
@@ -95,9 +97,10 @@ const LoginPage = () => {
       </Dialog>
       <div className="h-screen flex flex-col gap-10 items-center justify-center">
         <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex flex-col items-center gap-5">
+          <div className="mb-9 flex flex-col items-center gap-5">
             <FiLogIn size={50} />
             <div className="text-3xl font-semibold text-center">LOGIN</div>
+            <InfoBox content="Enter your password and mnemonic phrase to login" />
           </div>
           <div className="w-full flex flex-col gap-1">
             <PasswordInput label="Password" {...register("password")} />
@@ -111,13 +114,22 @@ const LoginPage = () => {
               <p className="text-red-500 text-sm">{errors.mnemonic.message}</p>
             )}
           </div>
-          <InfoBox content="This password will be used to unlock your wallet" />
+
           <div className="flex justify-center">
             <Button color="blue" type="submit" {...({} as any)}>
               Continue
             </Button>
           </div>
         </form>
+        <div>
+          Or{" "}
+          <span
+            onClick={() => router.push("/wallet/new/pick-pw")}
+            className="text-blue-500 cursor-pointer underline hover:text-blue-800"
+          >
+            Create a new wallet
+          </span>
+        </div>
       </div>
     </>
   );

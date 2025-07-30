@@ -15,11 +15,11 @@ import {
 import { FaMoneyBillTransfer } from "react-icons/fa6";
 import { FaCheckCircle } from "react-icons/fa";
 import React, { useState } from "react";
+import Cookies from "js-cookie";
 import { IoIosArrowBack } from "react-icons/io";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { useWallet } from "@/states/wallet";
 import { useRouter } from "next/navigation";
 
 const INPUT_CLASSNAME =
@@ -43,7 +43,6 @@ const sendingCoinSchema = z.object({
 type FormData = z.infer<typeof sendingCoinSchema>;
 
 const SendCoinPage = () => {
-  const { walletAddress } = useWallet();
   const [mining, setMining] = useState(false);
   const router = useRouter();
   const {
@@ -57,12 +56,15 @@ const SendCoinPage = () => {
   const onSubmit = (data: FormData) => {
     try {
       setMining(true);
-      const response = axios.post("http://localhost:3000/api/send", {
-        from: walletAddress,
-        to: data.receiverAddress,
-        amount: data.amount,
-        privateKey: data.privateKey,
-      });
+      const response = axios.post(
+        "http://localhost:3000/api/send",
+        {
+          to: data.receiverAddress,
+          amount: data.amount,
+          privateKey: data.privateKey,
+        },
+        { headers: { Authorization: `Bearer ${Cookies.get("accessToken")}` } }
+      );
       response.then(() => {
         setMining(false);
         setOpenDialog(true);

@@ -35,20 +35,10 @@ export async function POST(req: NextRequest) {
       expiresIn: "7d",
     });
 
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      accessToken: token,
+      token,
     });
-
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-    });
-
-    return response;
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || "Server error" },

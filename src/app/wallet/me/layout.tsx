@@ -1,5 +1,6 @@
 "use client";
 
+import Cookies from "js-cookie";
 import { useWalletCreate } from "@/states/wallet_creation";
 import { CiCoinInsert } from "react-icons/ci";
 import React, { useEffect, useState } from "react";
@@ -24,26 +25,24 @@ const myWalletLayout = ({ children }: Props) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
-    setWalletAddress("71cf87eb4e5232d92e3a5296c1ff78e949e27cf7");
     resetWalletCreation();
-    if (walletAddress) {
-      fetchBalance();
-    }
-    // if (!walletAddress) {
-    //   router.replace("/wallet/new");
-    // }
+    fetchBalance();
   }, [walletAddress]);
 
   const fetchBalance = async () => {
+    const accessToken = Cookies.get("accessToken");
     try {
-      const response = await axios.get(
-        `/api/wallet/balance?address=${walletAddress}`
-      );
+      const response = await axios.get(`/api/wallet/balance`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (response.status === 200) {
+        setWalletAddress(response.data.address);
         setWalletBalance(response.data.balance);
       }
     } catch (error) {
       console.error("Failed to fetch wallet balance:", error);
+      Cookies.remove("accessToken");
+      router.replace("/wallet/login");
     }
   };
 
@@ -69,7 +68,8 @@ const myWalletLayout = ({ children }: Props) => {
               <Button
                 onClick={() => {
                   setWalletAddress("");
-                  router.replace("/wallet/new");
+                  Cookies.remove("accessToken");
+                  router.replace("/wallet/login");
                 }}
                 {...({} as any)}
               >

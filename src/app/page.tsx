@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Block } from "@/types/block";
 import Pagination from "@/components/pagination";
+import Cookies from "js-cookie";
 import { GrPowerReset } from "react-icons/gr";
 
 const ITEMS_PER_PAGE = 8;
@@ -25,7 +26,7 @@ const App = () => {
   const [totalTxPages, setTotalTxPages] = useState(1);
   const [refetchTx, setRefetchTx] = useState(false);
   const [loadingTx, setLoadingTx] = useState(false);
-  const { setWalletAddress } = useWallet();
+  const { walletAddress, setWalletAddress } = useWallet();
 
   const router = useRouter();
 
@@ -80,21 +81,36 @@ const App = () => {
               <CiCoinInsert size={50} />
               <h1 className="text-xl font-semibold">MyCoin Blockchain</h1>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                <span className="text-sm font-medium">Connected</span>
+            {walletAddress ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-medium">Connected</span>
+                </div>
+                <Button
+                  onClick={() => {
+                    setWalletAddress("");
+                    Cookies.remove("accessToken");
+                    router.replace("/wallet/login");
+                  }}
+                  {...({} as any)}
+                >
+                  Disconnect
+                </Button>
               </div>
-              <Button
-                onClick={() => {
-                  setWalletAddress("");
-                  router.replace("/wallet/new");
-                }}
-                {...({} as any)}
-              >
-                Disconnect
-              </Button>
-            </div>
+            ) : (
+              <>
+                <Button
+                  color="blue"
+                  onClick={() => {
+                    router.replace("/wallet/login");
+                  }}
+                  {...({} as any)}
+                >
+                  Login
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
