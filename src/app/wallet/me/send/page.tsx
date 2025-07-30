@@ -55,7 +55,6 @@ const SendCoinPage = () => {
   });
 
   const onSubmit = (data: FormData) => {
-    console.log(data);
     try {
       setMining(true);
       const response = axios.post("http://localhost:3000/api/send", {

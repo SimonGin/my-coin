@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Wallet as WalletClass } from "@/services/wallet/wallet"; // elliptic-based wallet
 import { Wallet as WalletModel } from "@/models/wallet";
 import { connectToDatabase } from "@/lib/mongoose";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = "my-coin-jwt-secret";
 
 export async function POST(req: NextRequest) {
   await connectToDatabase();
@@ -16,11 +19,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Reconstruct wallet using mnemonic + password
     const wallet = new WalletClass(mnemonic, password);
     const derivedAddress = wallet.getAddress();
 
-    // 2. Find wallet in DB
     const dbWallet = await WalletModel.findOne({ address: derivedAddress });
 
     if (!dbWallet) {
@@ -30,12 +31,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Return wallet info
-    return NextResponse.json({
-      success: true,
-      address: dbWallet.address,
-      publicKey: dbWallet.publicKey,
+    const token = jwt.sign({ address: dbWallet.address }, JWT_SECRET, {
+      expiresIn: "7d",
     });
+
+    const response = NextResponse.json({
+      success: true,
+      accessToken: token,
+    });
+
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    });
+
+    return response;
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || "Server error" },
