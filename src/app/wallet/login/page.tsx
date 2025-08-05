@@ -3,21 +3,20 @@
 import Cookies from "js-cookie";
 import InfoBox from "@/components/info_box";
 import PasswordInput from "@/components/pw_input";
-import { useWallet } from "@/states/wallet";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Dialog,
-  DialogBody,
   DialogFooter,
   DialogHeader,
 } from "@material-tailwind/react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import React from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 // Icons
 import { FaCheckCircle } from "react-icons/fa";
+import { FaRegCircleXmark } from "react-icons/fa6";
 import { FiLogIn } from "react-icons/fi";
 import z from "zod";
 
@@ -30,7 +29,7 @@ type FormData = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
   const router = useRouter();
-  const { setWalletAddress } = useWallet();
+  const [loginState, setLoginState] = useState("");
   const {
     register,
     handleSubmit,
@@ -52,16 +51,19 @@ const LoginPage = () => {
       );
       if (response.status === 200) {
         Cookies.set("accessToken", response.data.token);
-        setOpenSuccessDialog(true);
-      } else {
+        setLoginState("success");
+      } else if (response.status === 404) {
+        setLoginState("failed");
         console.error("Login failed:", response.data);
       }
     } catch (error) {
+      setLoginState("failed");
       console.error("Failed to login:", error);
     }
+    setOpenSuccessDialog(true);
   };
 
-  const [openSuccessDialog, setOpenSuccessDialog] = React.useState(false);
+  const [openSuccessDialog, setOpenSuccessDialog] = useState(false);
 
   return (
     <>
@@ -72,26 +74,39 @@ const LoginPage = () => {
         {...({} as any)}
       >
         <DialogHeader
-          className="flex flex-col gap-3 items-center text-green-500 text-3xl"
+          className={`flex flex-col gap-3 items-center text-3xl ${
+            loginState === "success" ? "text-green-500" : "text-red-500"
+          }`}
           {...({} as any)}
         >
-          <FaCheckCircle size={100} />
-          Succesfully Logged In
+          {loginState === "success" ? (
+            <>
+              <FaCheckCircle size={100} />
+              Succesfully Logged In
+            </>
+          ) : (
+            <>
+              <FaRegCircleXmark size={100} />
+              Login Failed
+            </>
+          )}
         </DialogHeader>
-        <DialogBody className="text-center" {...({} as any)}>
-          The amount of coin has been sent to the receiver's address
-        </DialogBody>
-
         <DialogFooter className="flex justify-center" {...({} as any)}>
           <Button
             variant="gradient"
-            color="green"
+            color={loginState === "success" ? "green" : "red"}
             {...({} as any)}
             onClick={() => {
-              router.push("/wallet/me");
+              if (loginState === "success") {
+                router.push("/wallet/me");
+              } else {
+                setOpenSuccessDialog(false);
+              }
             }}
           >
-            <span>Okay</span>
+            <span>
+              {loginState === "success" ? "Continue" : "Let me try again"}
+            </span>
           </Button>
         </DialogFooter>
       </Dialog>

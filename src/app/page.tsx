@@ -31,6 +31,24 @@ const App = () => {
   const router = useRouter();
 
   useEffect(() => {
+    fetchBalance();
+  }, []);
+
+  const fetchBalance = async () => {
+    const accessToken = Cookies.get("accessToken");
+    try {
+      const response = await axios.get(`/api/wallet/balance`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (response.status === 200) {
+        setWalletAddress(response.data.address);
+      }
+    } catch (error) {
+      console.error("Failed to fetch wallet balance:", error);
+    }
+  };
+
+  useEffect(() => {
     fetchBlockHistory();
   }, [currentBlockPage, refetchBlocks]);
 
@@ -83,7 +101,12 @@ const App = () => {
             </div>
             {walletAddress ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+                <div
+                  onClick={() => {
+                    router.replace("/wallet/me");
+                  }}
+                  className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 cursor-pointer"
+                >
                   <div className="h-2 w-2 rounded-full bg-green-500"></div>
                   <span className="text-sm font-medium">Connected</span>
                 </div>

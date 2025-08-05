@@ -52,7 +52,7 @@ const myWalletLayout = ({ children }: Props) => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div
-              className="flex items-center gap-3"
+              className="flex items-center gap-3 cursor-pointer"
               onClick={() => {
                 router.replace("/");
               }}
