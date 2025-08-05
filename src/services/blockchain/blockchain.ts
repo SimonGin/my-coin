@@ -5,7 +5,10 @@ import { createProofOfWork, runProofOfWork } from "./proof_of_work";
 import {
   createCoinbaseTransaction,
   createUTXOTransaction,
-} from "./transaction"; // you must have this helper
+} from "./transaction";
+
+const BASE_REWARD = 10;
+const HALVING_INTERVAL = 50;
 
 export const insertBlock = async (
   minerAddress: string,
@@ -15,16 +18,22 @@ export const insertBlock = async (
 
   const count = await Block.countDocuments();
 
+  const reward = Math.floor(
+    BASE_REWARD / 2 ** Math.floor(count / HALVING_INTERVAL)
+  );
+
   if (count === 0) {
     const timestamp = Date.now();
     const prevHash = "";
     const index = 0;
 
-    // Only coinbase transaction in genesis
-    const coinbaseTx = createCoinbaseTransaction(minerAddress, "Genesis Block");
+    const coinbaseTx = createCoinbaseTransaction(
+      minerAddress,
+      "Genesis Block",
+      reward
+    );
     const transactions = [coinbaseTx];
 
-    // Create hash based on serialized transactions
     const headers =
       prevHash + JSON.stringify(transactions) + timestamp.toString();
     const hash = crypto.createHash("sha256").update(headers).digest("hex");
@@ -48,7 +57,7 @@ export const insertBlock = async (
   const timestamp = Date.now();
   const prevHash = prevBlock!.hash;
 
-  const coinbaseTx = createCoinbaseTransaction(minerAddress);
+  const coinbaseTx = createCoinbaseTransaction(minerAddress, "", reward);
   const transactions = [coinbaseTx, ...otherTransactions];
 
   const newBlock = {
@@ -75,7 +84,7 @@ export const sendCoinAndMine = async (
   from: string,
   to: string,
   amount: number,
-  privateKey: string // hex string
+  privateKey: string
 ) => {
   const tx = await createUTXOTransaction(from, to, amount, privateKey);
   const block = await insertBlock(from, [tx]);

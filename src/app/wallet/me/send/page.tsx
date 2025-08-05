@@ -1,6 +1,8 @@
 "use client";
-
-import { z } from "zod";
+// Libraries
+import axios from "axios";
+import Cookies from "js-cookie";
+// Components
 import {
   Button,
   Card,
@@ -12,15 +14,17 @@ import {
   Input,
   Spinner,
 } from "@material-tailwind/react";
-import { FaMoneyBillTransfer } from "react-icons/fa6";
-import { FaCheckCircle } from "react-icons/fa";
+// Hooks
 import React, { useState } from "react";
-import Cookies from "js-cookie";
-import { IoIosArrowBack } from "react-icons/io";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
 import { useRouter } from "next/navigation";
+// Icons
+import { FaCheckCircle } from "react-icons/fa";
+import { FaMoneyBillTransfer } from "react-icons/fa6";
+import { IoIosArrowBack } from "react-icons/io";
+// Forms
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 const INPUT_CLASSNAME =
   "!border !border-gray-300 bg-white text-gray-900 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 placeholder:opacity-100 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10";

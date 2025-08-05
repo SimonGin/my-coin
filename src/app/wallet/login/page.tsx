@@ -1,9 +1,9 @@
 "use client";
-
+// Libraries
 import Cookies from "js-cookie";
+// Components
 import InfoBox from "@/components/info_box";
 import PasswordInput from "@/components/pw_input";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Dialog,
@@ -11,14 +11,17 @@ import {
   DialogHeader,
 } from "@material-tailwind/react";
 import axios from "axios";
+// Hooks
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 // Icons
 import { FaCheckCircle } from "react-icons/fa";
 import { FaRegCircleXmark } from "react-icons/fa6";
 import { FiLogIn } from "react-icons/fi";
+// Forms
 import z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 const loginSchema = z.object({
   password: z.string().nonempty("Password is required"),
