@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+# Reference Documents
+
+- Learn about blockchains, coins, transactions and wallet via this Github repository: [Project Based Learning](https://github.com/practical-tutorials/project-based-learning?tab=readme-ov-file#go) in section "Building Blockchain in Go". It basically leads to the blog posts series named "[Building Blockchain in Go](https://jeiwan.net/posts/building-blockchain-in-go-part-1/)" of the author "Ivan Kuznetsov"
+
+- With the help of AI assistant ChatGPT

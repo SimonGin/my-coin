@@ -69,7 +69,7 @@ const myWalletLayout = ({ children }: Props) => {
                 onClick={() => {
                   setWalletAddress("");
                   Cookies.remove("accessToken");
-                  router.replace("/wallet/login");
+                  router.replace("/wallet");
                 }}
                 {...({} as any)}
               >

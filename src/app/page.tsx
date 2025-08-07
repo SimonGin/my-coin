@@ -123,7 +123,7 @@ const App = () => {
                   onClick={() => {
                     setWalletAddress("");
                     Cookies.remove("accessToken");
-                    router.replace("/wallet/login");
+                    router.replace("/wallet");
                   }}
                   {...({} as any)}
                 >
@@ -135,7 +135,7 @@ const App = () => {
                 <Button
                   color="blue"
                   onClick={() => {
-                    router.replace("/wallet/login");
+                    router.replace("/wallet");
                   }}
                   {...({} as any)}
                 >

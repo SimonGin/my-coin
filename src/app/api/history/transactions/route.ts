@@ -8,11 +8,11 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const skip = (page - 1) * limit;
+  const limitParam = searchParams.get("limit");
+  const limit = limitParam ? parseInt(limitParam) : undefined;
+  const skip = limit ? (page - 1) * limit : 0;
 
   const filterAddress = searchParams.get("address")?.toLowerCase();
-
   const blocks = await Block.find().sort({ index: -1 }).lean();
 
   const allTxs: any[] = [];
@@ -58,7 +58,6 @@ export async function GET(req: NextRequest) {
           timestamp: blockTimestamp,
         };
 
-        // Apply filtering here
         if (
           !filterAddress ||
           txObj.from.toLowerCase() === filterAddress ||
@@ -70,12 +69,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const paginatedTxs = allTxs.slice(skip, skip + limit);
+  const paginatedTxs = limit ? allTxs.slice(skip, skip + limit) : allTxs;
 
   return NextResponse.json({
     total: allTxs.length,
     page,
-    totalPages: Math.ceil(allTxs.length / limit),
+    totalPages: limit ? Math.ceil(allTxs.length / limit) : 1,
     transactions: paginatedTxs,
   });
 }

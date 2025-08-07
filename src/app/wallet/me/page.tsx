@@ -8,10 +8,11 @@ import React, { useEffect, useState } from "react";
 import { FaArrowDown, FaArrowUp } from "react-icons/fa6";
 import axios from "axios";
 import Pagination from "@/components/pagination";
+import TransactionStatsChart from "@/components/chart";
 
 const TABLE_HEAD = ["Transaction", "Amount", "Type", "From/To", "Time"];
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 8;
 
 const MyWalletPage = () => {
   const { walletAddress } = useWallet();
@@ -60,6 +61,14 @@ const MyWalletPage = () => {
           Send Coin
         </Button>
       </div>
+      {transactions.length > 0 && (
+        <div className="my-8">
+          <TransactionStatsChart
+            transactions={transactions}
+            address={walletAddress}
+          />
+        </div>
+      )}
 
       <div className="p-4">
         <Card className="border shadow-sm" {...({} as any)}>
