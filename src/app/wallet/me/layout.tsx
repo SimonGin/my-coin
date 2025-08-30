@@ -42,7 +42,7 @@ const myWalletLayout = ({ children }: Props) => {
     } catch (error) {
       console.error("Failed to fetch wallet balance:", error);
       Cookies.remove("accessToken");
-      router.replace("/wallet/login");
+      router.replace("/");
     }
   };
 
@@ -69,7 +69,7 @@ const myWalletLayout = ({ children }: Props) => {
                 onClick={() => {
                   setWalletAddress("");
                   Cookies.remove("accessToken");
-                  router.replace("/wallet");
+                  router.push("/");
                 }}
                 {...({} as any)}
               >

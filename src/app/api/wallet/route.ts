@@ -3,6 +3,9 @@ import { Wallet as WalletClass } from "@/services/wallet/wallet"; // updated ell
 import { Wallet as WalletModel } from "@/models/wallet";
 import { encryptPrivateKey } from "@/utils/crypto";
 import { connectToDatabase } from "@/lib/mongoose";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = "my-coin-jwt-secret";
 
 export async function POST(req: NextRequest) {
   await connectToDatabase();
@@ -41,12 +44,17 @@ export async function POST(req: NextRequest) {
       { upsert: true, new: true }
     );
 
+    const token = jwt.sign({ address: wallet.getAddress() }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
     return NextResponse.json({
       success: true,
       address: wallet.getAddress(),
       mnemonic: wallet.mnemonic,
       publicKey: wallet.publicKey,
-      privateKey: wallet.privateKey, // Optional: consider removing in prod
+      privateKey: wallet.privateKey,
+      token, // Optional: consider removing in prod
     });
   } catch (err: any) {
     return NextResponse.json(
